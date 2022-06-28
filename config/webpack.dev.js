@@ -1,6 +1,6 @@
 const path = require('path');//nodejs核心模块
 const ESLintPlugin = require('eslint-webpack-plugin');
-var HtmlWebpackPlugin = require('html-webpack-plugin');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 module.exports = {
     //入口
     entry: './src/main.js', //相对路径
@@ -101,7 +101,9 @@ module.exports = {
         host: "localhost", //启动服务器域名
         port: "3000",//启动服务器端口号
         open: true, //是否自动打开浏览器
+        hot: true, //开启HMR
     },
     //模式
     mode: 'development',
+    devtool: "cheap-module-source-map",
 }
