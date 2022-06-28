@@ -2,6 +2,25 @@ const path = require('path');//nodejs核心模块
 const ESLintPlugin = require('eslint-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
+function getStyleLoader(pre){
+    return [
+        MiniCssExtractPlugin.loader,
+        'css-loader',
+        {
+            loader: "postcss-loader",
+            options: {
+                postcssOptions: {
+                    ident: 'postcss',
+                    plugins: [
+                        require('postcss-preset-env')()
+                    ]
+                }
+            }
+        },
+        pre,
+    ].filter(Boolean)
+}
 module.exports = {
     //入口
     entry: './src/main.js', //相对路径
@@ -22,60 +41,20 @@ module.exports = {
             {
                 test: /\.css$/,//只检测.css结尾的文件
                 //执行顺序是从右到左, 从下到上
-                use: [
-                    MiniCssExtractPlugin.loader, //提取css成单独的文件
-                    'css-loader',//将css资源变异成commonjs的模块到js中
-                    {
-                        loader: "postcss-loader",
-                        options: {
-                            postcssOptions: {
-                                ident: 'postcss',
-                                plugins: [
-                                    require('postcss-preset-env')()
-                                ]
-                            }
-                        }
-                    },
-                ],
+                use: getStyleLoader(),
 
 
             },
             {
                 test: /\.less$/,
                 //loader: 'xx' //只能使用一个loader
-                use: [MiniCssExtractPlugin.loader, 'css-loader',
-                    'less-loader',
-                    {
-                        loader: "postcss-loader",
-                        options: {
-                            postcssOptions: {
-                                ident: 'postcss',
-                                plugins: [
-                                    require('postcss-preset-env')()
-                                ]
-                            }
-                        }
-                    },
-                ],
+                use: getStyleLoader('less-loader'),
             },
             {
                 test: /\.s[a,c]ss$/,
                 //loader: 'xx' //只能使用一个loader
-                use: [MiniCssExtractPlugin.loader,
-                    'css-loader',
-                    {
-                        loader: "postcss-loader",
-                        options: {
-                            postcssOptions: {
-                                ident: 'postcss',
-                                plugins: [
-                                    require('postcss-preset-env')()
-                                ]
-                            }
-                        }
-                    },
-                    'sass-loader',
-                ],//将sess编译成css文件
+                use: 
+                getStyleLoader('sass-loader'),
             },
             {
                 test: /\.styl$/,
@@ -136,6 +115,7 @@ module.exports = {
         new MiniCssExtractPlugin({
             filename: 'static/css/main.css'
         }),
+        new CssMinimizerPlugin(),
         
     ],
     //开发服务器: 不会输出资源, 在内存中编译打包的
