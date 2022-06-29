@@ -1,6 +1,9 @@
+const os = require('os');
 const path = require('path');//nodejs核心模块
 const ESLintPlugin = require('eslint-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+
+const threads = os.cpus().length; //cpu核数
 module.exports = {
     //入口
     entry: './src/main.js', //相对路径
@@ -21,65 +24,83 @@ module.exports = {
         rules: [
             //loader的配置
             {
-                test: /\.css$/,//只检测.css结尾的文件
-                //执行顺序是从右到左, 从下到上
-                use: [
-                    'style-loader', //将js中css通过创建style标签添加html文件中生效
-                    'css-loader'//将css资源变异成commonjs的模块到js中
-                ]
-            },
-            {
-                test: /\.less$/,
-                //loader: 'xx' //只能使用一个loader
-                use: ['style-loader', 'css-loader', 'less-loader'],//将less编译成css文件
-            },
-            {
-                test: /\.s[a,c]ss$/,
-                //loader: 'xx' //只能使用一个loader
-                use: ['style-loader', 'css-loader', 'sass-loader'],//将sess编译成css文件
-            },
-            {
-                test: /\.styl$/,
-                //loader: 'xx' //只能使用一个loader
-                use: ['style-loader', 'css-loader', 'stylus-loader'],//将styl编译成css文件
-            },
-            {
-                test: /\.(png|jpe?g|gif|webp)$/,
-                //loader: 'xx' //只能使用一个loader
-                type: 'asset'
-            },
-            {
-                test: /\.(png|jpe?g|gif|sebp|svg)$/,
-                type: 'asset',
-                parser: {
-                    dataUrlCondition: {
-                        //小于10kb的图片转base64
-                        //优点: 减小请求数量  缺点: 体积会更大
-                        maxSize: 10 * 1024 // 10kb
+                //每个文件只能被其中一个loader配置处理
+                oneOf: [
+                    {
+                        test: /\.css$/,//只检测.css结尾的文件
+                        //执行顺序是从右到左, 从下到上
+                        use: [
+                            'style-loader', //将js中css通过创建style标签添加html文件中生效
+                            'css-loader'//将css资源变异成commonjs的模块到js中
+                        ]
+                    },
+                    {
+                        test: /\.less$/,
+                        //loader: 'xx' //只能使用一个loader
+                        use: ['style-loader', 'css-loader', 'less-loader'],//将less编译成css文件
+                    },
+                    {
+                        test: /\.s[a,c]ss$/,
+                        //loader: 'xx' //只能使用一个loader
+                        use: ['style-loader', 'css-loader', 'sass-loader'],//将sess编译成css文件
+                    },
+                    {
+                        test: /\.styl$/,
+                        //loader: 'xx' //只能使用一个loader
+                        use: ['style-loader', 'css-loader', 'stylus-loader'],//将styl编译成css文件
+                    },
+                    {
+                        test: /\.(png|jpe?g|gif|webp)$/,
+                        //loader: 'xx' //只能使用一个loader
+                        type: 'asset'
+                    },
+                    {
+                        test: /\.(png|jpe?g|gif|sebp|svg)$/,
+                        type: 'asset',
+                        parser: {
+                            dataUrlCondition: {
+                                //小于10kb的图片转base64
+                                //优点: 减小请求数量  缺点: 体积会更大
+                                maxSize: 10 * 1024 // 10kb
+                            }
+                        },
+                        generator: {
+                            //输出图片名称
+                            //[hash:10]代表哈希值只去前十位
+                            filename: 'static/images/[hash:10][ext][query]'
+                        }
+                    },
+                    {
+                        test: /\.(ttf|woff2?|mp3|mp4|avi)$/,
+                        type: 'asset/resource',
+                        generator: {
+                            //[hash:10]代表哈希值只去前十位
+                            filename: 'static/media/[hash:10][ext][query]'
+                        }
+                    },
+                    {
+                        test: /\.js$/,
+                        // exclude: /(node_modules)/,//排除node_modules中的js文件(这些文件不处理)
+                        include: path.resolve(__dirname, '../src'), //只处理src 下的文件, 其他文件不处理
+                        use: [
+                            {
+                                loader: 'thread-loader',// 开启多进程
+                                options: {
+                                    works: threads, //进程数量
+                                },
+                            },
+                            {
+                                loader: 'babel-loader',
+                                options: {
+                                    // presets: ['@babel/preset-env']
+                                    cacheDirectory: true, //开启babel缓存
+                                    cacheCompression: false, //关闭缓存文件压缩
+                                }
+                            }
+                        ]
                     }
-                },
-                generator: {
-                    //输出图片名称
-                    //[hash:10]代表哈希值只去前十位
-                    filename: 'static/images/[hash:10][ext][query]'
-                }
+                ],
             },
-            {
-                test: /\.(ttf|woff2?|mp3|mp4|avi)$/,
-                type: 'asset/resource',
-                generator: {
-                    //[hash:10]代表哈希值只去前十位
-                    filename: 'static/media/[hash:10][ext][query]'
-                }
-            },
-            {
-                test: /\.js$/,
-                exclude: /(node_modules)/,//排除node_modules中的js文件(这些文件不处理)
-                loader: 'babel-loader',
-                // options: {
-                //     presets: ['@babel/preset-env']
-                // }
-            }
         ],
     },
     //插件
@@ -88,6 +109,10 @@ module.exports = {
         new ESLintPlugin({
             //检测哪些文件
             context: path.resolve(__dirname, "../src"),
+            exclude: 'node_modules', //默认值
+            cache: true, //开启缓存
+            cacheLocation: path.resolve(__dirname, '../node_modules/.cache/eslintcache'),//指定缓存位置
+            threads, //开启多进程和设置进程数量
         }),
         new HtmlWebpackPlugin({
             //模板:以public/index.html文件创建新的html文件
